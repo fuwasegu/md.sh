@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 @MainActor
 final class FileWatcher {
@@ -6,7 +6,7 @@ final class FileWatcher {
     private let onChange: @MainActor () -> Void
 
     private var fileDescriptor: Int32 = -1
-    private var source: DispatchSourceFileSystemObject?
+    private nonisolated(unsafe) var source: DispatchSourceFileSystemObject?
 
     init(url: URL, onChange: @escaping @MainActor () -> Void) {
         self.url = url
