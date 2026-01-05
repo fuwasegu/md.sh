@@ -22,24 +22,25 @@ Mac ネイティブの軽量・高速 Markdown ダッシュボード。Claude Co
 ## Requirements
 
 - macOS 14.0 (Sonoma) 以上
-- Xcode 15+ / Swift 6
 
 ## Installation
 
-### ビルド
+### Homebrew (推奨)
+
+```bash
+brew install --cask fuwasegu/tap/md-sh
+```
+
+### ソースからビルド
 
 ```bash
 git clone https://github.com/fuwasegu/md.sh.git
 cd md.sh
 ./build.sh
-open "md.sh.app"
-```
-
-### アプリケーションフォルダへコピー
-
-```bash
 cp -r "md.sh.app" /Applications/
 ```
+
+> ビルドには Xcode 15+ / Swift 6 が必要です
 
 ## Usage
 
