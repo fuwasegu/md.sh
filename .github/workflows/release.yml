@@ -32,6 +32,7 @@ jobs:
           CONTENTS_DIR="$APP_DIR/Contents"
           MACOS_DIR="$CONTENTS_DIR/MacOS"
           RESOURCES_DIR="$CONTENTS_DIR/Resources"
+          VERSION=${GITHUB_REF_NAME#v}
 
           mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
           cp ".build/release/MdSh" "$MACOS_DIR/"
@@ -78,7 +79,7 @@ jobs:
           fi
 
           # Create Info.plist
-          cat > "$CONTENTS_DIR/Info.plist" << 'EOF'
+          cat > "$CONTENTS_DIR/Info.plist" << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -100,7 +101,7 @@ jobs:
               <key>CFBundlePackageType</key>
               <string>APPL</string>
               <key>CFBundleShortVersionString</key>
-              <string>${GITHUB_REF_NAME#v}</string>
+              <string>${VERSION}</string>
               <key>CFBundleVersion</key>
               <string>${GITHUB_RUN_NUMBER}</string>
               <key>LSMinimumSystemVersion</key>
@@ -120,6 +121,8 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
           zip -r "md.sh-${VERSION}.zip" "md.sh.app"
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          SHA256=$(shasum -a 256 "md.sh-${VERSION}.zip" | cut -d ' ' -f 1)
+          echo "SHA256=${SHA256}" >> $GITHUB_ENV
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
@@ -127,3 +130,11 @@ jobs:
           files: md.sh-${{ env.VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Tap
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          repository: fuwasegu/homebrew-tap
+          event-type: update-cask
+          client-payload: '{"version": "${{ env.VERSION }}", "sha256": "${{ env.SHA256 }}"}'

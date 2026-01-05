@@ -23,6 +23,8 @@ struct TerminalPanelView: NSViewRepresentable {
         env["LANG"] = "ja_JP.UTF-8"
         env["LC_ALL"] = "ja_JP.UTF-8"
         env["LC_CTYPE"] = "UTF-8"
+        env["TERM"] = "xterm-256color"
+        env["TERM_PROGRAM"] = "md.sh"
 
         terminal.startProcess(
             executable: shell,
