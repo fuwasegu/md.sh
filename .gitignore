@@ -1,0 +1,26 @@
+# Build
+.build/
+*.app/
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# SwiftPM
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+*.dSYM
+
+# Generated icons
+Resources/AppIcon_*.png
+!Resources/AppIcon.png
+
+# IDE
+.idea/
+*.swp
+*~
