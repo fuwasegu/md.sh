@@ -1,62 +1,73 @@
-# Project: md.sh (Next-Gen Native Markdown Dashboard)
+# md.sh
 
-AI（Claude Code / Aider 等）によるドキュメント生成を最大限に活用するための、Macネイティブな軽量・高速プレビューアー。
+Mac ネイティブの軽量・高速 Markdown ダッシュボード。Claude Code などの AI コーディングツールとの連携に最適化。
 
----
+![macOS](https://img.shields.io/badge/macOS-14.0+-blue)
+![Swift](https://img.shields.io/badge/Swift-6-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## 1. コア・コンセプト
-* **Anti-Electron:** VS Code よりも圧倒的に軽く、起動とレスポンスを最優先する。
-* **Mono-repo Ready:** 数万ファイルあるプロジェクトでも、特定のドキュメント資産のみを抽出して固まらない。
-* **AI Co-pilot Friendly:** 外部（ターミナル等）からのファイル変更を瞬時に検知し、プレビューを同期する。
+## Features
 
----
+- **3カラムレイアウト** - ファイルツリー | プレビュー | ターミナル
+- **高速プレビュー** - GitHub 風スタイル、コードハイライト、Mermaid 図表対応
+- **ファイル監視** - 外部変更を即座に検知して Hot Reload
+- **レビューコメント** - テキスト選択してコメント、ターミナルへ直接送信
+- **タブ/ウィンドウ** - 複数ファイル・プロジェクトを同時に開ける
+- **拡張子フィルター** - プロジェクト内の表示ファイルを動的にフィルタリング
 
-## 2. 画面構成 (3-Column Layout)
-Mac 標準の `NavigationSplitView` を採用し、直感的な操作感を実現する。
+## Screenshots
 
-1.  **Left: File Tree (The Filtered Navigator)**
-    * プロジェクト内の `.md`, `.json`, `.yaml`, `.mermaid` のみを抽出表示。
-    * `node_modules`, `.next`, `.git` 等の巨大ディレクトリはデフォルトでスキャン対象外（無視リスト機能）。
-2.  **Center: Preview (Live Renderer)**
-    * WebKit ベースの高速レンダリング。
-    * Mermaid.js を組み込み、図表をネイティブ級の速度で表示。
-    * Markdown 内のリンククリックによるファイルジャンプ（左カラムとの連動）をサポート。
-3.  **Right: Embedded Terminal**
-    * `SwiftTerm` 等を利用した完全なターミナル。
-    * ここで Claude Code を動かし、左でファイルを選び、中央で成果物を確認するループを作る。
+*Coming soon*
 
----
+## Requirements
 
-## 3. 主要機能 (Technical Specifications)
+- macOS 14.0 (Sonoma) 以上
+- Xcode 15+ / Swift 6
 
-### A. 超高速ファイルスキャン
-* **Lazy Loading:** ディレクトリを展開した瞬間にその階層だけをスキャン。
-* **Extension Filtering:** 指定拡張子以外はメモリに載せず、ファイル I/O を最小化。
+## Installation
 
-### B. スマート・プレビュー
-* **Mermaid.js Integration:** コードブロック ` ```mermaid ` を検知し、即座に図表化。
-* **GitHub Flavor:** 見た目は GitHub の README に準拠。
-* **Hot Reload:** `NSFilePresenter` を使用。OS レベルでファイル保存を検知し、リロードなしで WebKit の DOM を書き換え。
+### ビルド
 
-### C. ナビゲーション
-* **Relative Path Jumping:** ドキュメント間の相対パスによる遷移をサポート。
-* **Deep Link:** JSON や YAML ファイルを選択した際は、構造化されたビューア（Tree View）で表示するモードを搭載。
+```bash
+git clone https://github.com/fuwasegu/md.sh.git
+cd md.sh
+./build.sh
+open "md.sh.app"
+```
 
----
+### アプリケーションフォルダへコピー
 
-## 4. 技術スタック (Implementation Strategy)
-* **Language:** Swift 6 / SwiftUI
-* **Parser:** [swift-markdown](https://github.com/apple/swift-markdown) (Apple)
-* **Terminal:** [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm)
-* **Rendering:** WKWebView + [Ink](https://github.com/johnsundell/ink) (Markdown to HTML)
-* **File Watching:** `NSFilePresenter` / `Combine`
+```bash
+cp -r "md.sh.app" /Applications/
+```
 
----
+## Usage
 
-## 5. ユースケース
-1.  **Claude Code で設計:** 右側のターミナルで「Next.js のコンポーネント構成を mermaid で書いて」と命令。
-2.  **即時確認:** 生成された `ARCHITECTURE.md` が中央のプレビューに即座に反映。
-3.  **ドキュメント探索:** 左側のツリーで他のドキュメントを高速に切り替え、リンクを辿って仕様を確認。
+1. **フォルダを開く** - `Cmd+O` でプロジェクトフォルダを選択
+2. **ファイル選択** - 左のツリーからファイルをクリック
+3. **ターミナル** - 右側で Claude Code などを実行
+4. **レビュー** - プレビュー内のテキストを選択してコメント追加
+5. **送信** - コメントをターミナルに直接送信
 
----
+## Keyboard Shortcuts
 
+| キー | 動作 |
+|------|------|
+| `Cmd+O` | フォルダを開く |
+| `Cmd+Shift+O` | 新規ウィンドウでフォルダを開く |
+| `Cmd+N` | 新規ウィンドウ |
+| `Cmd+T` | ターミナル表示切替 |
+| `Cmd+,` | 設定 |
+
+## Tech Stack
+
+- **SwiftUI** - UI フレームワーク
+- **swift-markdown** - Markdown パーサー
+- **SwiftTerm** - ターミナルエミュレータ
+- **WKWebView** - プレビューレンダリング
+- **highlight.js** - コードハイライト
+- **Mermaid.js** - 図表レンダリング
+
+## License
+
+MIT License
