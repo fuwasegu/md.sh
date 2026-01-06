@@ -223,10 +223,7 @@ struct MarkdownRenderer {
     """
 
     private static func loadCSS() -> String {
-        if let url = Bundle.module.url(forResource: "github-markdown", withExtension: "css"),
-           let css = try? String(contentsOf: url, encoding: .utf8) {
-            return css
-        }
+        // Use embedded CSS directly - Bundle.module doesn't work in distributed .app bundles
         return defaultCSS
     }
 
