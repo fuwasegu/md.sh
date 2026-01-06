@@ -13,7 +13,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-markdown", from: "0.4.0"),
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm", branch: "main"),
+        // Using local fork with CJK character cursor drift fix
+        .package(path: "LocalPackages/SwiftTerm"),
     ],
     targets: [
         // Main executable - just the entry point
