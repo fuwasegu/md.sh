@@ -183,14 +183,32 @@ final class AppState {
     var availableExtensions: [String] = []
     var enabledExtensions: Set<String> = []
 
+    // Trigger for forcing tree refresh
+    var treeRefreshTrigger: Int = 0
+
     func refreshExtensions() {
         guard let url = rootURL else {
             availableExtensions = []
             enabledExtensions = []
             return
         }
-        availableExtensions = FileScanner.shared.collectExtensions(in: url).sorted()
-        enabledExtensions = Set(availableExtensions)
+        let newExtensions = FileScanner.shared.collectExtensions(in: url).sorted()
+
+        // If first time (no extensions yet), enable all
+        if availableExtensions.isEmpty {
+            availableExtensions = newExtensions
+            enabledExtensions = Set(newExtensions)
+        } else {
+            // Add new extensions to enabled set (preserve existing filter)
+            let addedExtensions = Set(newExtensions).subtracting(availableExtensions)
+            for ext in addedExtensions {
+                enabledExtensions.insert(ext)
+            }
+            availableExtensions = newExtensions
+        }
+
+        // Always trigger tree refresh
+        treeRefreshTrigger += 1
     }
 
     func toggleExtension(_ ext: String) {
