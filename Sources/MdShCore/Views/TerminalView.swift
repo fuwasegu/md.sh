@@ -4,11 +4,12 @@ import SwiftTerm
 struct TerminalPanelView: NSViewRepresentable {
     let workingDirectory: URL?
     let font: NSFont
-    let onTerminalReady: ((LocalProcessTerminalView) -> Void)?
+    let onTerminalReady: ((IMETerminalView) -> Void)?
 
-    func makeNSView(context: Context) -> LocalProcessTerminalView {
+    func makeNSView(context: Context) -> IMETerminalView {
         // Use a reasonable initial size to ensure proper terminal initialization
-        let terminal = LocalProcessTerminalView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        // IMETerminalView adds IME composition text display support
+        let terminal = IMETerminalView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
 
         // Configure terminal appearance
         terminal.configureNativeColors()
@@ -23,11 +24,15 @@ struct TerminalPanelView: NSViewRepresentable {
             // Set environment with working directory and UTF-8 locale
             var env = ProcessInfo.processInfo.environment
             env["PWD"] = workDir
+            // Japanese locale for proper CJK character width
             env["LANG"] = "ja_JP.UTF-8"
-            env["LC_ALL"] = "ja_JP.UTF-8"
-            env["LC_CTYPE"] = "UTF-8"
+            env["LC_CTYPE"] = "ja_JP.UTF-8"
+            // Don't set LC_ALL - let individual LC_* settings take effect
+            env.removeValue(forKey: "LC_ALL")
             env["TERM"] = "xterm-256color"
             env["TERM_PROGRAM"] = "md.sh"
+            // Force Unicode East Asian Width handling
+            env["VTE_CJK_WIDTH"] = "1"
 
             terminal.startProcess(
                 executable: shell,
@@ -50,8 +55,9 @@ struct TerminalPanelView: NSViewRepresentable {
         return terminal
     }
 
-    func updateNSView(_ terminal: LocalProcessTerminalView, context: Context) {
+    func updateNSView(_ terminal: IMETerminalView, context: Context) {
         terminal.font = font
+        terminal.updateOverlayFont(font)
     }
 }
 
@@ -61,7 +67,7 @@ struct TerminalContainerView: View {
     @Environment(AppState.self) private var appState
     @State private var terminalKey = UUID()
     @State private var settings = AppSettings.shared
-    @State private var terminalRef: LocalProcessTerminalView?
+    @State private var terminalRef: IMETerminalView?
 
     var body: some View {
         VStack(spacing: 0) {
