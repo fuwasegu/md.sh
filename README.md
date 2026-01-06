@@ -1,19 +1,30 @@
-# md.sh
+<p align="center">
+  <img src="Resources/AppIcon.png" width="128" height="128" alt="md.sh icon">
+</p>
 
-Mac ネイティブの軽量・高速 Markdown ダッシュボード。Claude Code などの AI コーディングツールとの連携に最適化。
+<h1 align="center">md.sh</h1>
 
-![macOS](https://img.shields.io/badge/macOS-14.0+-blue)
-![Swift](https://img.shields.io/badge/Swift-6-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
+<p align="center">
+  A lightweight, fast, Mac-native Markdown dashboard optimized for AI coding tools like Claude Code.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-14.0+-blue" alt="macOS">
+  <img src="https://img.shields.io/badge/Swift-6-orange" alt="Swift">
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
+  <a href="https://github.com/fuwasegu/md.sh/actions/workflows/ci.yml">
+    <img src="https://github.com/fuwasegu/md.sh/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+</p>
 
 ## Features
 
-- **3カラムレイアウト** - ファイルツリー | プレビュー | ターミナル
-- **高速プレビュー** - GitHub 風スタイル、コードハイライト、Mermaid 図表対応
-- **ファイル監視** - 外部変更を即座に検知して Hot Reload
-- **レビューコメント** - テキスト選択してコメント、ターミナルへ直接送信
-- **タブ/ウィンドウ** - 複数ファイル・プロジェクトを同時に開ける
-- **拡張子フィルター** - プロジェクト内の表示ファイルを動的にフィルタリング
+- **3-Column Layout** — File tree | Preview | Terminal
+- **Fast Preview** — GitHub-style rendering, syntax highlighting, Mermaid diagrams
+- **File Watching** — Hot reload on external changes with modification badges
+- **Review Comments** — Select text to add comments, highlight in preview, send directly to terminal
+- **Tabs & Windows** — Open multiple files and projects simultaneously
+- **Extension Filter** — Dynamically filter visible files by extension
 
 ## Screenshots
 
@@ -21,17 +32,17 @@ Mac ネイティブの軽量・高速 Markdown ダッシュボード。Claude Co
 
 ## Requirements
 
-- macOS 14.0 (Sonoma) 以上
+- macOS 14.0 (Sonoma) or later
 
 ## Installation
 
-### Homebrew (推奨)
+### Homebrew (Recommended)
 
 ```bash
 brew install --cask fuwasegu/tap/md-sh
 ```
 
-### ソースからビルド
+### Build from Source
 
 ```bash
 git clone https://github.com/fuwasegu/md.sh.git
@@ -40,34 +51,47 @@ cd md.sh
 cp -r "md.sh.app" /Applications/
 ```
 
-> ビルドには Xcode 15+ / Swift 6 が必要です
+> Requires Xcode 15+ / Swift 6
 
 ## Usage
 
-1. **フォルダを開く** - `Cmd+O` でプロジェクトフォルダを選択
-2. **ファイル選択** - 左のツリーからファイルをクリック
-3. **ターミナル** - 右側で Claude Code などを実行
-4. **レビュー** - プレビュー内のテキストを選択してコメント追加
-5. **送信** - コメントをターミナルに直接送信
+1. **Open Folder** — `Cmd+O` to select a project folder
+2. **Select File** — Click a file in the tree to preview
+3. **Terminal** — Run Claude Code or other tools in the right pane
+4. **Review** — Select text in preview to add comments
+5. **Send** — Send comments directly to terminal
 
 ## Keyboard Shortcuts
 
-| キー | 動作 |
-|------|------|
-| `Cmd+O` | フォルダを開く |
-| `Cmd+Shift+O` | 新規ウィンドウでフォルダを開く |
-| `Cmd+N` | 新規ウィンドウ |
-| `Cmd+T` | ターミナル表示切替 |
-| `Cmd+,` | 設定 |
+| Key | Action |
+|-----|--------|
+| `Cmd+O` | Open folder |
+| `Cmd+Shift+O` | Open folder in new window |
+| `Cmd+N` | New window |
+| `Cmd+T` | Toggle terminal |
+| `Cmd+,` | Settings |
 
 ## Tech Stack
 
-- **SwiftUI** - UI フレームワーク
-- **swift-markdown** - Markdown パーサー
-- **SwiftTerm** - ターミナルエミュレータ
-- **WKWebView** - プレビューレンダリング
-- **highlight.js** - コードハイライト
-- **Mermaid.js** - 図表レンダリング
+- **SwiftUI** — UI framework
+- **swift-markdown** — Markdown parser
+- **SwiftTerm** — Terminal emulator
+- **WKWebView** — Preview rendering
+- **highlight.js** — Syntax highlighting
+- **Mermaid.js** — Diagram rendering
+
+## Development
+
+```bash
+# Build
+swift build
+
+# Run tests
+swift test
+
+# Lint
+swiftlint lint
+```
 
 ## License
 
