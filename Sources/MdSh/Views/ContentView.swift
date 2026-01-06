@@ -136,17 +136,30 @@ struct TabButton: View {
         tab.id == appState.activeTabID
     }
 
+    private var isModified: Bool {
+        appState.isFileModified(tab.url)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             // Main tab area - select button
             Button {
                 appState.activeTabID = tab.id
+                // Clear modified flag when tab is clicked
+                appState.modifiedFiles.remove(tab.url)
             } label: {
-                Text(tab.name)
-                    .lineLimit(1)
-                    .padding(.leading, 12)
-                    .padding(.trailing, 4)
-                    .padding(.vertical, 6)
+                HStack(spacing: 4) {
+                    Text(tab.name)
+                        .lineLimit(1)
+                    if isModified {
+                        Circle()
+                            .fill(.blue)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .padding(.leading, 12)
+                .padding(.trailing, 4)
+                .padding(.vertical, 6)
             }
             .buttonStyle(.plain)
 

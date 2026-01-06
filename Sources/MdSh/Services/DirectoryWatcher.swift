@@ -5,13 +5,14 @@ import CoreServices
 @MainActor
 final class DirectoryWatcher {
     private let url: URL
-    private let onChange: @MainActor () -> Void
+    private let onChange: @MainActor ([URL]) -> Void
     private let debounceInterval: TimeInterval
 
     private nonisolated(unsafe) var eventStream: FSEventStreamRef?
     private var debounceTask: Task<Void, Never>?
+    private var pendingChanges: Set<URL> = []
 
-    init(url: URL, debounceInterval: TimeInterval = 0.5, onChange: @escaping @MainActor () -> Void) {
+    init(url: URL, debounceInterval: TimeInterval = 0.5, onChange: @escaping @MainActor ([URL]) -> Void) {
         self.url = url
         self.onChange = onChange
         self.debounceInterval = debounceInterval
@@ -27,11 +28,31 @@ final class DirectoryWatcher {
 
         eventStream = FSEventStreamCreate(
             nil,
-            { (_, info, _, _, _, _) in
+            { (_, info, numEvents, eventPaths, eventFlags, _) in
                 guard let info = info else { return }
                 let watcher = Unmanaged<DirectoryWatcher>.fromOpaque(info).takeUnretainedValue()
+
+                // Extract changed file paths
+                var changedURLs: [URL] = []
+                if let paths = unsafeBitCast(eventPaths, to: NSArray.self) as? [String] {
+                    for i in 0..<numEvents {
+                        let path = paths[i]
+                        let flags = eventFlags[i]
+
+                        // Only track file modifications and creations (not directories)
+                        let isFile = (flags & UInt32(kFSEventStreamEventFlagItemIsFile)) != 0
+                        let isModified = (flags & UInt32(kFSEventStreamEventFlagItemModified)) != 0
+                        let isCreated = (flags & UInt32(kFSEventStreamEventFlagItemCreated)) != 0
+                        let isRenamed = (flags & UInt32(kFSEventStreamEventFlagItemRenamed)) != 0
+
+                        if isFile && (isModified || isCreated || isRenamed) {
+                            changedURLs.append(URL(fileURLWithPath: path))
+                        }
+                    }
+                }
+
                 Task { @MainActor in
-                    watcher.handleChange()
+                    watcher.handleChange(changedURLs)
                 }
             },
             &context,
@@ -50,6 +71,7 @@ final class DirectoryWatcher {
     func stop() {
         debounceTask?.cancel()
         debounceTask = nil
+        pendingChanges.removeAll()
 
         if let stream = eventStream {
             FSEventStreamStop(stream)
@@ -59,13 +81,19 @@ final class DirectoryWatcher {
         }
     }
 
-    private func handleChange() {
+    private func handleChange(_ urls: [URL]) {
+        // Accumulate changes
+        pendingChanges.formUnion(urls)
+
         // Debounce rapid changes
         debounceTask?.cancel()
         debounceTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            self?.onChange()
+            guard let self = self else { return }
+            let changes = Array(self.pendingChanges)
+            self.pendingChanges.removeAll()
+            self.onChange(changes)
         }
     }
 }
