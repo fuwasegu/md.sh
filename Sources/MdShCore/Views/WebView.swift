@@ -35,8 +35,8 @@ struct ReviewWebView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
 
-        // Initial load
-        context.coordinator.lastHTML = html
+        // Initial load - use hash for efficient comparison
+        context.coordinator.lastHTMLHash = html.hashValue
         context.coordinator.webView = webView
         webView.loadHTMLString(html, baseURL: baseURL)
 
@@ -55,9 +55,10 @@ struct ReviewWebView: NSViewRepresentable {
         }
         context.coordinator.pendingHighlights = commentsData
 
-        // Only reload if HTML actually changed (prevents scroll reset on sheet dismiss)
-        if context.coordinator.lastHTML != html {
-            context.coordinator.lastHTML = html
+        // Only reload if HTML actually changed (use hash for efficient comparison)
+        let currentHash = html.hashValue
+        if context.coordinator.lastHTMLHash != currentHash {
+            context.coordinator.lastHTMLHash = currentHash
             webView.loadHTMLString(html, baseURL: baseURL)
             // Highlights will be applied in didFinish delegate callback
         } else {
@@ -83,7 +84,7 @@ struct ReviewWebView: NSViewRepresentable {
         let onLinkClick: ((URL) -> Void)?
         let onAddComment: ((Int, Int, String) -> Void)?
         let onFocusComment: ((UUID) -> Void)?
-        var lastHTML: String = ""
+        var lastHTMLHash: Int = 0
         weak var webView: WKWebView?
         var pendingHighlights: [[String: Any]]?
 
@@ -173,15 +174,16 @@ struct WebView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
 
-        context.coordinator.lastHTML = html
+        context.coordinator.lastHTMLHash = html.hashValue
         webView.loadHTMLString(html, baseURL: baseURL)
 
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        if context.coordinator.lastHTML != html {
-            context.coordinator.lastHTML = html
+        let currentHash = html.hashValue
+        if context.coordinator.lastHTMLHash != currentHash {
+            context.coordinator.lastHTMLHash = currentHash
             webView.loadHTMLString(html, baseURL: baseURL)
         }
     }
@@ -193,7 +195,7 @@ struct WebView: NSViewRepresentable {
     @MainActor
     class Coordinator: NSObject, WKNavigationDelegate {
         let onLinkClick: ((URL) -> Void)?
-        var lastHTML: String = ""
+        var lastHTMLHash: Int = 0
 
         init(onLinkClick: ((URL) -> Void)?) {
             self.onLinkClick = onLinkClick

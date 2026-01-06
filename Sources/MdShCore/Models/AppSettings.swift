@@ -8,16 +8,26 @@ final class AppSettings {
 
     // Terminal settings
     var terminalFontName: String {
-        didSet { UserDefaults.standard.set(terminalFontName, forKey: "terminalFontName") }
+        didSet {
+            UserDefaults.standard.set(terminalFontName, forKey: "terminalFontName")
+            invalidateFontCache()
+        }
     }
     var terminalFontSize: Double {
-        didSet { UserDefaults.standard.set(terminalFontSize, forKey: "terminalFontSize") }
+        didSet {
+            UserDefaults.standard.set(terminalFontSize, forKey: "terminalFontSize")
+            invalidateFontCache()
+        }
     }
 
     // Preview settings
     var previewFontSize: Double {
         didSet { UserDefaults.standard.set(previewFontSize, forKey: "previewFontSize") }
     }
+
+    // Font cache for performance (CTFont creation is expensive)
+    private var _cachedTerminalFont: NSFont?
+    private var _cachedFontKey: String = ""
 
     private init() {
         // Load from UserDefaults with defaults
@@ -34,9 +44,21 @@ final class AppSettings {
         self.previewFontSize = prevSize
     }
 
+    private func invalidateFontCache() {
+        _cachedTerminalFont = nil
+        _cachedFontKey = ""
+    }
+
     var terminalFont: NSFont {
-        // Create font with CJK fallback cascade
-        createFontWithCJKFallback(name: terminalFontName, size: terminalFontSize)
+        let key = "\(terminalFontName)-\(terminalFontSize)"
+        if key == _cachedFontKey, let cached = _cachedTerminalFont {
+            return cached
+        }
+
+        let font = createFontWithCJKFallback(name: terminalFontName, size: terminalFontSize)
+        _cachedTerminalFont = font
+        _cachedFontKey = key
+        return font
     }
 
     /// Creates a font with explicit CJK (Japanese/Chinese/Korean) fallback fonts
