@@ -26,9 +26,30 @@ final class FileScanner {
 
     private let fileManager = FileManager.default
 
+    // Cache: directory URL -> set of extensions contained in that directory (recursively)
+    private var directoryExtensionsCache: [URL: Set<String>] = [:]
+    private var cachedRootURL: URL?
+
+    /// Clear cache when switching projects
+    func clearCache() {
+        directoryExtensionsCache.removeAll()
+        cachedRootURL = nil
+    }
+
     /// Collect all unique file extensions in a directory (recursively)
+    /// Also populates the directory extensions cache for fast filtering
     func collectExtensions(in directoryURL: URL) -> [String] {
-        var extensions = Set<String>()
+        // Clear cache if root changed
+        if cachedRootURL != directoryURL {
+            clearCache()
+            cachedRootURL = directoryURL
+        }
+
+        var allExtensions = Set<String>()
+        // Map: directory -> extensions found directly in that directory
+        var directExtensions: [URL: Set<String>] = [:]
+        // Map: directory -> child directories
+        var directoryChildren: [URL: [URL]] = [:]
 
         guard let enumerator = fileManager.enumerator(
             at: directoryURL,
@@ -38,6 +59,7 @@ final class FileScanner {
             return []
         }
 
+        // First pass: collect all files and build directory structure
         for case let fileURL as URL in enumerator {
             let name = fileURL.lastPathComponent
 
@@ -48,18 +70,44 @@ final class FileScanner {
             }
 
             guard let resourceValues = try? fileURL.resourceValues(forKeys: [.isDirectoryKey]),
-                  let isDirectory = resourceValues.isDirectory,
-                  !isDirectory else {
+                  let isDirectory = resourceValues.isDirectory else {
                 continue
             }
 
-            let ext = fileURL.pathExtension.lowercased()
-            if !ext.isEmpty {
-                extensions.insert(ext)
+            let parentURL = fileURL.deletingLastPathComponent()
+
+            if isDirectory {
+                // Track directory hierarchy
+                directoryChildren[parentURL, default: []].append(fileURL)
+            } else {
+                let ext = fileURL.pathExtension.lowercased()
+                if !ext.isEmpty {
+                    allExtensions.insert(ext)
+                    directExtensions[parentURL, default: []].insert(ext)
+                }
             }
         }
 
-        return Array(extensions)
+        // Second pass: propagate extensions up the directory tree (bottom-up)
+        // Build the cache by calculating what extensions each directory contains (including subdirs)
+        func extensionsInDirectory(_ url: URL) -> Set<String> {
+            if let cached = directoryExtensionsCache[url] {
+                return cached
+            }
+
+            var extensions = directExtensions[url] ?? []
+            for childDir in directoryChildren[url] ?? [] {
+                extensions.formUnion(extensionsInDirectory(childDir))
+            }
+
+            directoryExtensionsCache[url] = extensions
+            return extensions
+        }
+
+        // Populate cache for root and all directories
+        _ = extensionsInDirectory(directoryURL)
+
+        return Array(allExtensions)
     }
 
     func scanDirectory(_ url: URL, enabledExtensions: Set<String>) -> [FileItem] {
@@ -88,7 +136,7 @@ final class FileScanner {
                     continue
                 }
 
-                // Check if directory contains any enabled files (recursively)
+                // Check if directory contains any enabled files (using cache)
                 if containsEnabledFiles(in: itemURL, enabledExtensions: enabledExtensions) {
                     items.append(FileItem(url: itemURL, isDirectory: true))
                 }
@@ -119,6 +167,12 @@ final class FileScanner {
     }
 
     private func containsEnabledFiles(in directoryURL: URL, enabledExtensions: Set<String>) -> Bool {
+        // Use cache if available (much faster)
+        if let cachedExtensions = directoryExtensionsCache[directoryURL] {
+            return !cachedExtensions.isDisjoint(with: enabledExtensions)
+        }
+
+        // Fallback to scanning if cache miss (shouldn't happen after collectExtensions)
         guard let enumerator = fileManager.enumerator(
             at: directoryURL,
             includingPropertiesForKeys: [.isDirectoryKey],
@@ -126,6 +180,8 @@ final class FileScanner {
         ) else {
             return false
         }
+
+        var foundExtensions = Set<String>()
 
         for case let fileURL as URL in enumerator {
             let name = fileURL.lastPathComponent
@@ -136,7 +192,7 @@ final class FileScanner {
                 continue
             }
 
-            // Check if it's an enabled file
+            // Check if it's a file
             guard let resourceValues = try? fileURL.resourceValues(forKeys: [.isDirectoryKey]),
                   let isDirectory = resourceValues.isDirectory else {
                 continue
@@ -144,12 +200,20 @@ final class FileScanner {
 
             if !isDirectory {
                 let ext = fileURL.pathExtension.lowercased()
-                if enabledExtensions.contains(ext) {
-                    return true
+                if !ext.isEmpty {
+                    foundExtensions.insert(ext)
+                    // Early exit if we find an enabled extension
+                    if enabledExtensions.contains(ext) {
+                        // Cache this result
+                        directoryExtensionsCache[directoryURL] = foundExtensions
+                        return true
+                    }
                 }
             }
         }
 
-        return false
+        // Cache the complete result
+        directoryExtensionsCache[directoryURL] = foundExtensions
+        return !foundExtensions.isDisjoint(with: enabledExtensions)
     }
 }

@@ -9,6 +9,7 @@ struct FileTreeView: View {
     @State private var showFilterPopover = false
     @State private var treeSelection: URL?
     @State private var directoryWatcher: DirectoryWatcher?
+    @State private var loadTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -70,20 +71,21 @@ struct FileTreeView: View {
             }
         }
         .onAppear {
-            loadRootItems()
+            loadRootItemsAsync()
             startDirectoryWatcher()
         }
         .onChange(of: rootURL) { _, _ in
-            loadRootItems()
+            loadRootItemsAsync()
             startDirectoryWatcher()
         }
         .onChange(of: appState.enabledExtensions) { _, _ in
-            reloadTree()
+            reloadTreeAsync()
         }
         .onChange(of: appState.treeRefreshTrigger) { _, _ in
-            reloadTree()
+            reloadTreeAsync()
         }
         .onDisappear {
+            loadTask?.cancel()
             stopDirectoryWatcher()
         }
     }
@@ -111,28 +113,37 @@ struct FileTreeView: View {
         return allEnabled ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill"
     }
 
-    private func loadRootItems() {
+    private func loadRootItemsAsync() {
+        // Cancel any existing load task
+        loadTask?.cancel()
+
         isLoading = true
-        rootItems = FileScanner.shared.scanDirectory(rootURL, enabledExtensions: appState.enabledExtensions)
-        // Pre-load children for root directories to ensure they display correctly
-        for item in rootItems where item.isDirectory {
-            loadChildrenRecursively(item, depth: 2)
-        }
-        isLoading = false
-    }
 
-    private func loadChildrenRecursively(_ item: FileItem, depth: Int) {
-        guard depth > 0, item.isDirectory, !item.isLoaded else { return }
-        FileScanner.shared.loadChildren(for: item, enabledExtensions: appState.enabledExtensions)
-        if let children = item.children {
-            for child in children where child.isDirectory {
-                loadChildrenRecursively(child, depth: depth - 1)
+        loadTask = Task { @MainActor in
+            // Small yield to let UI update with loading state
+            await Task.yield()
+
+            guard !Task.isCancelled else { return }
+
+            let items = FileScanner.shared.scanDirectory(rootURL, enabledExtensions: appState.enabledExtensions)
+
+            guard !Task.isCancelled else { return }
+
+            // Pre-load children for root directories (depth 1 only)
+            // This ensures disclosure indicators appear correctly
+            for item in items where item.isDirectory {
+                FileScanner.shared.loadChildren(for: item, enabledExtensions: appState.enabledExtensions)
             }
+
+            guard !Task.isCancelled else { return }
+
+            rootItems = items
+            isLoading = false
         }
     }
 
-    private func reloadTree() {
-        loadRootItems()
+    private func reloadTreeAsync() {
+        loadRootItemsAsync()
     }
 }
 

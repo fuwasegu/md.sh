@@ -1,6 +1,16 @@
 import Foundation
 import CoreServices
 
+/// Wrapper class to safely pass context to FSEvents callback
+/// This allows us to invalidate the reference before the watcher is deallocated
+private final class WatcherContext {
+    weak var watcher: DirectoryWatcher?
+
+    init(watcher: DirectoryWatcher) {
+        self.watcher = watcher
+    }
+}
+
 /// Watches a directory tree for file system changes using FSEvents
 @MainActor
 final class DirectoryWatcher {
@@ -12,6 +22,9 @@ final class DirectoryWatcher {
     private var debounceTask: Task<Void, Never>?
     private var pendingChanges: Set<URL> = []
 
+    // Context wrapper - must be retained as long as stream is active
+    nonisolated(unsafe) private var contextRef: Unmanaged<WatcherContext>?
+
     init(url: URL, debounceInterval: TimeInterval = 0.5, onChange: @escaping @MainActor ([URL]) -> Void) {
         self.url = url
         self.onChange = onChange
@@ -20,18 +33,27 @@ final class DirectoryWatcher {
 
     deinit {
         // Ensure cleanup if deallocated without explicit stop
+        // Note: deinit is nonisolated, so we directly access nonisolated(unsafe) properties
         if let stream = eventStream {
             FSEventStreamStop(stream)
             FSEventStreamInvalidate(stream)
             FSEventStreamRelease(stream)
+        }
+        if let ref = contextRef {
+            ref.takeUnretainedValue().watcher = nil
+            ref.release()
         }
     }
 
     func start() {
         stop()
 
-        var context = FSEventStreamContext()
-        context.info = Unmanaged.passUnretained(self).toOpaque()
+        // Create context wrapper with retained reference
+        let context = WatcherContext(watcher: self)
+        contextRef = Unmanaged.passRetained(context)
+
+        var fsContext = FSEventStreamContext()
+        fsContext.info = contextRef?.toOpaque()
 
         let paths = [url.path as CFString] as CFArray
 
@@ -39,7 +61,11 @@ final class DirectoryWatcher {
             nil,
             { _, info, numEvents, eventPaths, eventFlags, _ in
                 guard let info = info else { return }
-                let watcher = Unmanaged<DirectoryWatcher>.fromOpaque(info).takeUnretainedValue()
+                // Get the context wrapper (not taking ownership)
+                let contextWrapper = Unmanaged<WatcherContext>.fromOpaque(info).takeUnretainedValue()
+
+                // Check if watcher is still valid (weak reference)
+                guard let watcher = contextWrapper.watcher else { return }
 
                 // Extract changed file paths
                 var changedURLs: [URL] = []
@@ -64,14 +90,19 @@ final class DirectoryWatcher {
                     watcher.handleChange(changedURLs)
                 }
             },
-            &context,
+            &fsContext,
             paths,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
             debounceInterval,
             FSEventStreamCreateFlags(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagFileEvents)
         )
 
-        guard let stream = eventStream else { return }
+        guard let stream = eventStream else {
+            // Release context if stream creation failed
+            contextRef?.release()
+            contextRef = nil
+            return
+        }
 
         FSEventStreamSetDispatchQueue(stream, DispatchQueue.main)
         FSEventStreamStart(stream)
@@ -82,11 +113,23 @@ final class DirectoryWatcher {
         debounceTask = nil
         pendingChanges.removeAll()
 
+        cleanupStream()
+    }
+
+    private func cleanupStream() {
         if let stream = eventStream {
             FSEventStreamStop(stream)
             FSEventStreamInvalidate(stream)
             FSEventStreamRelease(stream)
             eventStream = nil
+        }
+
+        // Release the context wrapper (must be done after stream is released)
+        if let ref = contextRef {
+            // Invalidate the weak reference first
+            ref.takeUnretainedValue().watcher = nil
+            ref.release()
+            contextRef = nil
         }
     }
 
