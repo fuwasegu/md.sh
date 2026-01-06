@@ -118,6 +118,9 @@ final class AppState {
     }
     var reviewStore = ReviewStore()
 
+    // Comment focus for highlighting in ReviewPanel
+    var focusedCommentId: UUID?
+
     // Terminal input handler
     var terminalSendHandler: ((String) -> Void)?
 

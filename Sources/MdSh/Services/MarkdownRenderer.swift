@@ -135,11 +135,70 @@ struct MarkdownRenderer {
     .review-btn:hover {
         background: #2ea043;
     }
+    /* Comment highlight styles */
+    .has-comment {
+        background: rgba(255, 220, 0, 0.15);
+        border-left: 3px solid #f0c000;
+        margin-left: -3px;
+        padding-left: 3px;
+        position: relative;
+    }
+    @media (prefers-color-scheme: dark) {
+        .has-comment {
+            background: rgba(255, 200, 0, 0.1);
+            border-left-color: #b8960a;
+        }
+    }
+    .comment-marker {
+        position: absolute;
+        right: 8px;
+        top: 0;
+        cursor: pointer;
+        font-size: 14px;
+        opacity: 0.6;
+        transition: opacity 0.15s;
+    }
+    .comment-marker:hover {
+        opacity: 1;
+    }
+    .comment-popover {
+        position: absolute;
+        right: 32px;
+        top: -4px;
+        width: 240px;
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        z-index: 1000;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    @media (prefers-color-scheme: dark) {
+        .comment-popover {
+            background: #161b22;
+            border-color: #30363d;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+    }
+    .comment-popover-header {
+        font-size: 11px;
+        color: #656d76;
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+    @media (prefers-color-scheme: dark) {
+        .comment-popover-header { color: #8b949e; }
+    }
     """
 
     private static let reviewScript = """
     <script>
     (function() {
+        let activePopover = null;
+        let storedComments = [];
+
         document.addEventListener('DOMContentLoaded', function() {
             // Add review button
             const btn = document.createElement('button');
@@ -155,6 +214,13 @@ struct MarkdownRenderer {
 
             document.addEventListener('selectionchange', function() {
                 setTimeout(updateButton, 10);
+            });
+
+            // Close popover on click outside
+            document.addEventListener('click', function(e) {
+                if (activePopover && !activePopover.contains(e.target) && !e.target.classList.contains('comment-marker')) {
+                    hidePopover();
+                }
             });
         });
 
@@ -218,6 +284,78 @@ struct MarkdownRenderer {
             selection.removeAllRanges();
             updateButton();
         }
+
+        function hidePopover() {
+            if (activePopover) {
+                activePopover.remove();
+                activePopover = null;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showPopover(commentId) {
+            hidePopover();
+            const comment = storedComments.find(c => c.id === commentId);
+            if (!comment) return;
+
+            const marker = document.querySelector('[data-comment-id="' + commentId + '"] .comment-marker');
+            if (!marker) return;
+
+            const popover = document.createElement('div');
+            popover.className = 'comment-popover';
+            popover.innerHTML = '<div class="comment-popover-header">Comment</div><div>' + escapeHtml(comment.comment) + '</div>';
+            marker.parentElement.appendChild(popover);
+            activePopover = popover;
+
+            // Also notify Swift to focus in ReviewPanel
+            window.webkit.messageHandlers.review.postMessage({
+                action: 'focusComment',
+                commentId: commentId
+            });
+        }
+
+        // Global function called from Swift
+        window.applyCommentHighlights = function(comments) {
+            storedComments = comments;
+
+            // Clear existing highlights
+            document.querySelectorAll('.has-comment').forEach(el => {
+                el.classList.remove('has-comment');
+                delete el.dataset.commentId;
+            });
+            document.querySelectorAll('.comment-marker').forEach(el => el.remove());
+            hidePopover();
+
+            // Apply highlights for each comment
+            comments.forEach(comment => {
+                let firstElement = null;
+                for (let line = comment.startLine; line <= comment.endLine; line++) {
+                    const el = document.querySelector('[data-line="' + line + '"], [data-line-start="' + line + '"]');
+                    if (el) {
+                        el.classList.add('has-comment');
+                        el.dataset.commentId = comment.id;
+                        if (!firstElement) firstElement = el;
+                    }
+                }
+
+                // Add marker to first element only
+                if (firstElement && !firstElement.querySelector('.comment-marker')) {
+                    const marker = document.createElement('span');
+                    marker.className = 'comment-marker';
+                    marker.textContent = '💬';
+                    marker.onclick = function(e) {
+                        e.stopPropagation();
+                        showPopover(comment.id);
+                    };
+                    firstElement.appendChild(marker);
+                }
+            });
+        };
     })();
     </script>
     """

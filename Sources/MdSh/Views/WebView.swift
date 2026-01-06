@@ -4,8 +4,10 @@ import WebKit
 struct ReviewWebView: NSViewRepresentable {
     let html: String
     let baseURL: URL?
+    let comments: [ReviewComment]
     var onLinkClick: ((URL) -> Void)?
     var onAddComment: ((Int, Int, String) -> Void)?
+    var onFocusComment: ((UUID) -> Void)?
 
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -21,6 +23,7 @@ struct ReviewWebView: NSViewRepresentable {
 
         // Initial load
         context.coordinator.lastHTML = html
+        context.coordinator.webView = webView
         webView.loadHTMLString(html, baseURL: baseURL)
 
         return webView
@@ -31,22 +34,50 @@ struct ReviewWebView: NSViewRepresentable {
         if context.coordinator.lastHTML != html {
             context.coordinator.lastHTML = html
             webView.loadHTMLString(html, baseURL: baseURL)
+            // Apply highlights after load
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.applyHighlights(to: webView)
+            }
+        } else {
+            // HTML didn't change, just update highlights
+            applyHighlights(to: webView)
         }
     }
 
+    private func applyHighlights(to webView: WKWebView) {
+        let commentsData: [[String: Any]] = comments.map { comment in
+            [
+                "id": comment.id.uuidString,
+                "startLine": comment.startLine,
+                "endLine": comment.endLine,
+                "comment": comment.comment
+            ]
+        }
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: commentsData),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return
+        }
+
+        webView.evaluateJavaScript("if (window.applyCommentHighlights) { window.applyCommentHighlights(\(jsonString)); }")
+    }
+
     func makeCoordinator() -> Coordinator {
-        Coordinator(onLinkClick: onLinkClick, onAddComment: onAddComment)
+        Coordinator(onLinkClick: onLinkClick, onAddComment: onAddComment, onFocusComment: onFocusComment)
     }
 
     @MainActor
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         let onLinkClick: ((URL) -> Void)?
         let onAddComment: ((Int, Int, String) -> Void)?
+        let onFocusComment: ((UUID) -> Void)?
         var lastHTML: String = ""
+        weak var webView: WKWebView?
 
-        init(onLinkClick: ((URL) -> Void)?, onAddComment: ((Int, Int, String) -> Void)?) {
+        init(onLinkClick: ((URL) -> Void)?, onAddComment: ((Int, Int, String) -> Void)?, onFocusComment: ((UUID) -> Void)?) {
             self.onLinkClick = onLinkClick
             self.onAddComment = onAddComment
+            self.onFocusComment = onFocusComment
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -61,6 +92,10 @@ struct ReviewWebView: NSViewRepresentable {
                let endLine = body["endLine"] as? Int,
                let text = body["text"] as? String {
                 onAddComment?(startLine, endLine, text)
+            } else if action == "focusComment",
+                      let commentIdString = body["commentId"] as? String,
+                      let commentId = UUID(uuidString: commentIdString) {
+                onFocusComment?(commentId)
             }
         }
 
