@@ -8,6 +8,7 @@ struct FileTreeView: View {
     @State private var isLoading = true
     @State private var showFilterPopover = false
     @State private var treeSelection: URL?
+    @State private var directoryWatcher: DirectoryWatcher?
 
     var body: some View {
         Group {
@@ -45,6 +46,7 @@ struct FileTreeView: View {
                     }
                 }
                 .listStyle(.sidebar)
+                .id(appState.treeRefreshTrigger)  // Force List rebuild
                 .onChange(of: treeSelection) { _, newValue in
                     if let url = newValue, !FileItem.isDirectory(url) {
                         appState.openFile(url)
@@ -69,13 +71,36 @@ struct FileTreeView: View {
         }
         .onAppear {
             loadRootItems()
+            startDirectoryWatcher()
         }
         .onChange(of: rootURL) { _, _ in
             loadRootItems()
+            startDirectoryWatcher()
         }
         .onChange(of: appState.enabledExtensions) { _, _ in
             reloadTree()
         }
+        .onChange(of: appState.treeRefreshTrigger) { _, _ in
+            reloadTree()
+        }
+        .onDisappear {
+            stopDirectoryWatcher()
+        }
+    }
+
+    private func startDirectoryWatcher() {
+        stopDirectoryWatcher()
+        let state = appState
+        let url = rootURL
+        directoryWatcher = DirectoryWatcher(url: url) {
+            state.refreshExtensions()
+        }
+        directoryWatcher?.start()
+    }
+
+    private func stopDirectoryWatcher() {
+        directoryWatcher?.stop()
+        directoryWatcher = nil
     }
 
     private var filterIconName: String {
