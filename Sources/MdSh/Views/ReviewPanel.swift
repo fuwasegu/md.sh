@@ -37,17 +37,34 @@ struct ReviewPanel: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // Comments list
-                List {
-                    ForEach(appState.reviewStore.comments) { comment in
-                        CommentRow(
-                            comment: comment,
-                            onEdit: { editingComment = comment },
-                            onDelete: { appState.reviewStore.remove(comment) },
-                            onSendToTerminal: { sendCommentToTerminal(comment) }
-                        )
+                ScrollViewReader { proxy in
+                    List {
+                        ForEach(appState.reviewStore.comments) { comment in
+                            CommentRow(
+                                comment: comment,
+                                isHighlighted: appState.focusedCommentId == comment.id,
+                                onEdit: { editingComment = comment },
+                                onDelete: { appState.reviewStore.remove(comment) },
+                                onSendToTerminal: { sendCommentToTerminal(comment) }
+                            )
+                            .id(comment.id)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .onChange(of: appState.focusedCommentId) { _, newId in
+                        if let id = newId {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo(id, anchor: .center)
+                            }
+                            // Clear highlight after 3 seconds
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                if appState.focusedCommentId == id {
+                                    appState.focusedCommentId = nil
+                                }
+                            }
+                        }
                     }
                 }
-                .listStyle(.plain)
             }
 
             Divider()
@@ -110,6 +127,7 @@ struct ReviewPanel: View {
 
 struct CommentRow: View {
     let comment: ReviewComment
+    let isHighlighted: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onSendToTerminal: () -> Void
@@ -162,6 +180,12 @@ struct CommentRow: View {
                 .font(.callout)
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHighlighted ? Color.yellow.opacity(0.3) : Color.clear)
+        )
+        .animation(.easeInOut(duration: 0.3), value: isHighlighted)
         .contentShape(Rectangle())
         .onHover { hovering in
             isHovering = hovering

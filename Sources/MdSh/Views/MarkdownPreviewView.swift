@@ -34,8 +34,12 @@ struct MarkdownPreviewView: View {
                 ReviewWebView(
                     html: html,
                     baseURL: fileURL.deletingLastPathComponent(),
+                    comments: currentFileComments,
                     onLinkClick: handleLinkClick,
-                    onAddComment: handleAddComment
+                    onAddComment: handleAddComment,
+                    onFocusComment: { commentId in
+                        appState.focusedCommentId = commentId
+                    }
                 )
             } else {
                 WebView(
@@ -73,6 +77,10 @@ struct MarkdownPreviewView: View {
     private var isMarkdownFile: Bool {
         let ext = fileURL.pathExtension.lowercased()
         return ext == "md" || ext == "markdown"
+    }
+
+    private var currentFileComments: [ReviewComment] {
+        appState.reviewStore.comments.filter { $0.fileURL == fileURL }
     }
 
     private func handleAddComment(_ startLine: Int, _ endLine: Int, _ text: String) {
