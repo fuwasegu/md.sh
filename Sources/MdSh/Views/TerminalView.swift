@@ -7,35 +7,39 @@ struct TerminalPanelView: NSViewRepresentable {
     let onTerminalReady: ((LocalProcessTerminalView) -> Void)?
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
-        let terminal = LocalProcessTerminalView(frame: .zero)
+        // Use a reasonable initial size to ensure proper terminal initialization
+        let terminal = LocalProcessTerminalView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
 
         // Configure terminal appearance
         terminal.configureNativeColors()
         terminal.font = font
 
-        // Start shell process
+        // Delay shell start to allow view to be properly laid out
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let workDir = workingDirectory?.path ?? NSHomeDirectory()
+        let dir = workingDirectory?.path
 
-        // Set environment with working directory and UTF-8 locale
-        var env = ProcessInfo.processInfo.environment
-        env["PWD"] = workDir
-        env["LANG"] = "ja_JP.UTF-8"
-        env["LC_ALL"] = "ja_JP.UTF-8"
-        env["LC_CTYPE"] = "UTF-8"
-        env["TERM"] = "xterm-256color"
-        env["TERM_PROGRAM"] = "md.sh"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Set environment with working directory and UTF-8 locale
+            var env = ProcessInfo.processInfo.environment
+            env["PWD"] = workDir
+            env["LANG"] = "ja_JP.UTF-8"
+            env["LC_ALL"] = "ja_JP.UTF-8"
+            env["LC_CTYPE"] = "UTF-8"
+            env["TERM"] = "xterm-256color"
+            env["TERM_PROGRAM"] = "md.sh"
 
-        terminal.startProcess(
-            executable: shell,
-            args: ["-l"],  // Login shell
-            environment: Array(env.map { "\($0.key)=\($0.value)" }),
-            execName: nil
-        )
+            terminal.startProcess(
+                executable: shell,
+                args: ["-l"],  // Login shell
+                environment: Array(env.map { "\($0.key)=\($0.value)" }),
+                execName: nil
+            )
 
-        // Change to working directory
-        if let dir = workingDirectory?.path {
-            terminal.send(txt: "cd \"\(dir)\" && clear\n")
+            // Change to working directory
+            if let dir = dir {
+                terminal.send(txt: "cd \"\(dir)\" && clear\n")
+            }
         }
 
         // Notify that terminal is ready

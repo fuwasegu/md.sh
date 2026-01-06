@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreText
 
 @MainActor
 @Observable
@@ -20,7 +21,8 @@ final class AppSettings {
 
     private init() {
         // Load from UserDefaults with defaults
-        let fontName = UserDefaults.standard.string(forKey: "terminalFontName") ?? "SF Mono"
+        // Default to Menlo which has better CJK fallback support
+        let fontName = UserDefaults.standard.string(forKey: "terminalFontName") ?? "Menlo"
         var fontSize = UserDefaults.standard.double(forKey: "terminalFontSize")
         if fontSize == 0 { fontSize = 13 }
         var prevSize = UserDefaults.standard.double(forKey: "previewFontSize")
@@ -33,8 +35,51 @@ final class AppSettings {
     }
 
     var terminalFont: NSFont {
-        NSFont(name: terminalFontName, size: terminalFontSize)
-            ?? NSFont.monospacedSystemFont(ofSize: terminalFontSize, weight: .regular)
+        // Create font with CJK fallback cascade
+        createFontWithCJKFallback(name: terminalFontName, size: terminalFontSize)
+    }
+
+    /// Creates a font with explicit CJK (Japanese/Chinese/Korean) fallback fonts
+    private func createFontWithCJKFallback(name: String, size: Double) -> NSFont {
+        let cgSize = CGFloat(size)
+
+        // Get the base font
+        guard let baseFont = NSFont(name: name, size: cgSize) else {
+            return NSFont.monospacedSystemFont(ofSize: cgSize, weight: .regular)
+        }
+
+        // Create font descriptor with cascade list for CJK support
+        let baseCTFont = baseFont as CTFont
+
+        // Define CJK fallback fonts (in order of preference)
+        let cjkFontNames = [
+            "Hiragino Kaku Gothic ProN",  // Japanese
+            "Hiragino Sans",              // Japanese (newer)
+            "PingFang SC",                // Simplified Chinese
+            "PingFang TC",                // Traditional Chinese
+            "Apple SD Gothic Neo",        // Korean
+            "Menlo",                      // Backup monospace
+        ]
+
+        // Create cascade list
+        var cascadeDescriptors: [CTFontDescriptor] = []
+        for fontName in cjkFontNames {
+            if let descriptor = CTFontDescriptorCreateWithNameAndSize(fontName as CFString, cgSize) as CTFontDescriptor? {
+                cascadeDescriptors.append(descriptor)
+            }
+        }
+
+        // Create new font with cascade list
+        let cascadeFont = CTFontCreateCopyWithAttributes(
+            baseCTFont,
+            cgSize,
+            nil,
+            CTFontDescriptorCreateWithAttributes([
+                kCTFontCascadeListAttribute: cascadeDescriptors
+            ] as CFDictionary)
+        )
+
+        return cascadeFont as NSFont
     }
 
     // Available monospace fonts
