@@ -18,6 +18,15 @@ final class DirectoryWatcher {
         self.debounceInterval = debounceInterval
     }
 
+    deinit {
+        // Ensure cleanup if deallocated without explicit stop
+        if let stream = eventStream {
+            FSEventStreamStop(stream)
+            FSEventStreamInvalidate(stream)
+            FSEventStreamRelease(stream)
+        }
+    }
+
     func start() {
         stop()
 
