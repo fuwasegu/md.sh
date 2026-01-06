@@ -47,15 +47,21 @@ struct TerminalSettingsView: View {
             }
 
             Section {
-                HStack {
-                    Text("Preview:")
-                    Spacer()
-                    Text("The quick brown fox jumps over the lazy dog")
-                        .font(.custom(settings.terminalFontName, size: settings.terminalFontSize))
-                        .padding(8)
-                        .background(Color.black)
-                        .foregroundStyle(.green)
-                        .cornerRadius(4)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Preview:")
+                        Spacer()
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("The quick brown fox jumps over the lazy dog")
+                        Text("日本語テスト: こんにちは世界 🎉")
+                    }
+                    .font(.custom(settings.terminalFontName, size: settings.terminalFontSize))
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.black)
+                    .foregroundStyle(.green)
+                    .cornerRadius(4)
                 }
             }
         }
