@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 @MainActor
 @Observable
@@ -68,5 +69,3 @@ final class FileItem: Identifiable, Hashable, Sendable {
         }
     }
 }
-
-import SwiftUI

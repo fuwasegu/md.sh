@@ -66,7 +66,7 @@ struct MarkdownRenderer {
         """
     }
 
-    private static func escapeHTML(_ string: String) -> String {
+    static func escapeHTML(_ string: String) -> String {
         string
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
@@ -505,7 +505,7 @@ private struct HTMLVisitor: MarkupVisitor {
             return "<div class=\"mermaid\"\(lineAttr)>\(escapeHTML(code))</div>\n"
         }
 
-        return "<pre\(lineAttr)><code class=\"language-\(language)\">\(escapeHTML(code))</code></pre>\n"
+        return "<pre\(lineAttr)><code class=\"language-\(escapeHTML(language))\">\(escapeHTML(code))</code></pre>\n"
     }
 
     mutating func visitLink(_ link: Link) -> String {

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 public struct ReviewComment: Identifiable {
@@ -94,5 +95,3 @@ public final class ReviewStore {
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
-
-import AppKit

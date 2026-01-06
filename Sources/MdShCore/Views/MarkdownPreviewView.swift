@@ -259,10 +259,7 @@ struct MarkdownPreviewView: View {
     }
 
     private func escapeHTML(_ string: String) -> String {
-        string
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
+        MarkdownRenderer.escapeHTML(string)
     }
 
     private func handleLinkClick(_ url: URL) {

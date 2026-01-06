@@ -38,7 +38,9 @@ struct TerminalPanelView: NSViewRepresentable {
 
             // Change to working directory
             if let dir = dir {
-                terminal.send(txt: "cd \"\(dir)\" && clear\n")
+                // Escape path for shell: wrap in single quotes, escape existing single quotes
+                let escapedDir = dir.replacingOccurrences(of: "'", with: "'\\''")
+                terminal.send(txt: "cd '\(escapedDir)' && clear\n")
             }
         }
 
