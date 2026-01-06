@@ -1,33 +1,44 @@
+import AppKit
 import Foundation
 
-struct ReviewComment: Identifiable {
-    let id = UUID()
-    let fileURL: URL
-    let startLine: Int
-    let endLine: Int
-    let originalText: String
-    var comment: String
-    let createdAt: Date = Date()
+public struct ReviewComment: Identifiable {
+    public let id = UUID()
+    public let fileURL: URL
+    public let startLine: Int
+    public let endLine: Int
+    public let originalText: String
+    public var comment: String
+    public let createdAt: Date = Date()
 
-    var fileName: String {
+    public var fileName: String {
         fileURL.lastPathComponent
     }
 
-    var lineRange: String {
+    public var lineRange: String {
         if startLine == endLine {
             return "L\(startLine)"
         } else {
             return "L\(startLine)-\(endLine)"
         }
     }
+
+    public init(fileURL: URL, startLine: Int, endLine: Int, originalText: String, comment: String) {
+        self.fileURL = fileURL
+        self.startLine = startLine
+        self.endLine = endLine
+        self.originalText = originalText
+        self.comment = comment
+    }
 }
 
 @Observable
 @MainActor
-final class ReviewStore {
-    var comments: [ReviewComment] = []
+public final class ReviewStore {
+    public var comments: [ReviewComment] = []
 
-    func add(fileURL: URL, startLine: Int, endLine: Int, originalText: String, comment: String) {
+    public init() {}
+
+    public func add(fileURL: URL, startLine: Int, endLine: Int, originalText: String, comment: String) {
         let review = ReviewComment(
             fileURL: fileURL,
             startLine: startLine,
@@ -38,21 +49,21 @@ final class ReviewStore {
         comments.append(review)
     }
 
-    func remove(_ comment: ReviewComment) {
+    public func remove(_ comment: ReviewComment) {
         comments.removeAll { $0.id == comment.id }
     }
 
-    func update(_ comment: ReviewComment, newText: String) {
+    public func update(_ comment: ReviewComment, newText: String) {
         if let index = comments.firstIndex(where: { $0.id == comment.id }) {
             comments[index].comment = newText
         }
     }
 
-    func clear() {
+    public func clear() {
         comments.removeAll()
     }
 
-    func copyToClipboard() {
+    public func copyToClipboard() {
         let text = formatForClipboard()
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
@@ -84,5 +95,3 @@ final class ReviewStore {
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
-
-import AppKit

@@ -1,6 +1,19 @@
 import SwiftUI
 import WebKit
 
+// Weak wrapper to avoid retain cycle between WKUserContentController and Coordinator
+private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var delegate: WKScriptMessageHandler?
+
+    init(delegate: WKScriptMessageHandler) {
+        self.delegate = delegate
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        delegate?.userContentController(userContentController, didReceive: message)
+    }
+}
+
 struct ReviewWebView: NSViewRepresentable {
     let html: String
     let baseURL: URL?
@@ -13,9 +26,10 @@ struct ReviewWebView: NSViewRepresentable {
         let configuration = WKWebViewConfiguration()
         configuration.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
-        // Add message handler for review
+        // Add message handler using weak wrapper to avoid retain cycle
         let contentController = configuration.userContentController
-        contentController.add(context.coordinator, name: "review")
+        let weakHandler = WeakScriptMessageHandler(delegate: context.coordinator)
+        contentController.add(weakHandler, name: "review")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -30,21 +44,7 @@ struct ReviewWebView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        // Only reload if HTML actually changed (prevents scroll reset on sheet dismiss)
-        if context.coordinator.lastHTML != html {
-            context.coordinator.lastHTML = html
-            webView.loadHTMLString(html, baseURL: baseURL)
-            // Apply highlights after load
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.applyHighlights(to: webView)
-            }
-        } else {
-            // HTML didn't change, just update highlights
-            applyHighlights(to: webView)
-        }
-    }
-
-    private func applyHighlights(to webView: WKWebView) {
+        // Prepare highlights data
         let commentsData: [[String: Any]] = comments.map { comment in
             [
                 "id": comment.id.uuidString,
@@ -53,12 +53,24 @@ struct ReviewWebView: NSViewRepresentable {
                 "comment": comment.comment
             ]
         }
+        context.coordinator.pendingHighlights = commentsData
 
+        // Only reload if HTML actually changed (prevents scroll reset on sheet dismiss)
+        if context.coordinator.lastHTML != html {
+            context.coordinator.lastHTML = html
+            webView.loadHTMLString(html, baseURL: baseURL)
+            // Highlights will be applied in didFinish delegate callback
+        } else {
+            // HTML didn't change, just update highlights immediately
+            applyHighlightsNow(to: webView, commentsData: commentsData)
+        }
+    }
+
+    private func applyHighlightsNow(to webView: WKWebView, commentsData: [[String: Any]]) {
         guard let jsonData = try? JSONSerialization.data(withJSONObject: commentsData),
               let jsonString = String(data: jsonData, encoding: .utf8) else {
             return
         }
-
         webView.evaluateJavaScript("if (window.applyCommentHighlights) { window.applyCommentHighlights(\(jsonString)); }")
     }
 
@@ -73,11 +85,29 @@ struct ReviewWebView: NSViewRepresentable {
         let onFocusComment: ((UUID) -> Void)?
         var lastHTML: String = ""
         weak var webView: WKWebView?
+        var pendingHighlights: [[String: Any]]?
 
         init(onLinkClick: ((URL) -> Void)?, onAddComment: ((Int, Int, String) -> Void)?, onFocusComment: ((UUID) -> Void)?) {
             self.onLinkClick = onLinkClick
             self.onAddComment = onAddComment
             self.onFocusComment = onFocusComment
+        }
+
+        // Note: No deinit needed - WeakScriptMessageHandler pattern prevents retain cycles
+        // and the message handler is automatically cleaned up when WKWebView is deallocated
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
+            // Apply pending highlights after page loads
+            guard let highlights = pendingHighlights else { return }
+            applyHighlightsToWebView(webView, highlights: highlights)
+        }
+
+        private func applyHighlightsToWebView(_ webView: WKWebView, highlights: [[String: Any]]) {
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: highlights),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                return
+            }
+            webView.evaluateJavaScript("if (window.applyCommentHighlights) { window.applyCommentHighlights(\(jsonString)); }")
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {

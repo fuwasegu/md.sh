@@ -1,0 +1,78 @@
+# SwiftLint Configuration for md.sh
+
+# Paths to include
+included:
+  - Sources
+
+# Paths to exclude
+excluded:
+  - .build
+  - Tests
+
+# Enabled rules
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - modifier_order
+  - multiline_arguments
+  - multiline_parameters
+  - operator_usage_whitespace
+  - overridden_super_call
+  - private_action
+  - private_outlet
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - toggle_bool
+  - trailing_closure
+  - unneeded_parentheses_in_closure_argument
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+  - yoda_condition
+
+# Disabled rules
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+  - type_body_length
+  - file_length
+  - function_body_length
+  - cyclomatic_complexity
+
+# Rule configurations
+identifier_name:
+  min_length:
+    warning: 1
+  excluded:
+    - id
+    - x
+    - y
+    - i
+    - n
+    - to
+    - ch
+    - bg
+    - fg
+    - tf
+    - ok
+    - on
+
+large_tuple:
+  warning: 4
+  error: 5
+
+nesting:
+  type_level: 3
+  function_level: 3
+
+type_name:
+  min_length: 2
+  max_length: 50
+
+function_parameter_count:
+  warning: 8
+  error: 10
+
+# Reporter type
+reporter: "xcode"

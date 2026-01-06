@@ -36,11 +36,10 @@ struct MarkdownPreviewView: View {
                     baseURL: fileURL.deletingLastPathComponent(),
                     comments: currentFileComments,
                     onLinkClick: handleLinkClick,
-                    onAddComment: handleAddComment,
-                    onFocusComment: { commentId in
-                        appState.focusedCommentId = commentId
-                    }
-                )
+                    onAddComment: handleAddComment
+                ) { commentId in
+                    appState.focusedCommentId = commentId
+                }
             } else {
                 WebView(
                     html: html,
@@ -259,10 +258,7 @@ struct MarkdownPreviewView: View {
     }
 
     private func escapeHTML(_ string: String) -> String {
-        string
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
+        MarkdownRenderer.escapeHTML(string)
     }
 
     private func handleLinkClick(_ url: URL) {

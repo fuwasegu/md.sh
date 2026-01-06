@@ -6,7 +6,7 @@ final class FileWatcher {
     private let onChange: @MainActor () -> Void
 
     private var fileDescriptor: Int32 = -1
-    private nonisolated(unsafe) var source: DispatchSourceFileSystemObject?
+    nonisolated(unsafe) private var source: DispatchSourceFileSystemObject?
 
     init(url: URL, onChange: @escaping @MainActor () -> Void) {
         self.url = url

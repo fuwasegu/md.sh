@@ -38,7 +38,9 @@ struct TerminalPanelView: NSViewRepresentable {
 
             // Change to working directory
             if let dir = dir {
-                terminal.send(txt: "cd \"\(dir)\" && clear\n")
+                // Escape path for shell: wrap in single quotes, escape existing single quotes
+                let escapedDir = dir.replacingOccurrences(of: "'", with: "'\\''")
+                terminal.send(txt: "cd '\(escapedDir)' && clear\n")
             }
         }
 
@@ -86,18 +88,17 @@ struct TerminalContainerView: View {
             // Terminal
             TerminalPanelView(
                 workingDirectory: workingDirectory,
-                font: settings.terminalFont,
-                onTerminalReady: { terminal in
-                    terminalRef = terminal
-                    appState.terminalSendHandler = { text in
-                        // Use bracketed paste mode to handle multi-line text
-                        // This prevents newlines from being executed as commands
-                        let bracketStart = "\u{1b}[200~"
-                        let bracketEnd = "\u{1b}[201~"
-                        terminal.send(txt: bracketStart + text + bracketEnd)
-                    }
+                font: settings.terminalFont
+            ) { terminal in
+                terminalRef = terminal
+                appState.terminalSendHandler = { text in
+                    // Use bracketed paste mode to handle multi-line text
+                    // This prevents newlines from being executed as commands
+                    let bracketStart = "\u{1b}[200~"
+                    let bracketEnd = "\u{1b}[201~"
+                    terminal.send(txt: bracketStart + text + bracketEnd)
                 }
-            )
+            }
             .id(terminalKey)
         }
         .onChange(of: workingDirectory) { _, _ in

@@ -1,8 +1,9 @@
 import Foundation
+import SwiftUI
 
 @MainActor
 @Observable
-final class FileItem: Identifiable, Hashable, Sendable {
+final class FileItem: Identifiable, Hashable {
     let id: URL
     let url: URL
     let name: String
@@ -68,5 +69,3 @@ final class FileItem: Identifiable, Hashable, Sendable {
         }
     }
 }
-
-import SwiftUI
