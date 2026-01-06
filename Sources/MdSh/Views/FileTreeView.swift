@@ -92,7 +92,10 @@ struct FileTreeView: View {
         stopDirectoryWatcher()
         let state = appState
         let url = rootURL
-        directoryWatcher = DirectoryWatcher(url: url) {
+        directoryWatcher = DirectoryWatcher(url: url) { changedFiles in
+            // Mark changed files as modified
+            state.markFilesModified(changedFiles)
+            // Refresh extensions (for new files)
             state.refreshExtensions()
         }
         directoryWatcher?.start()
@@ -202,15 +205,24 @@ struct ExtensionToggleRow: View {
 
 struct FileRowView: View {
     let item: FileItem
+    @Environment(AppState.self) private var appState
 
     var body: some View {
-        Label {
-            Text(item.name)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        } icon: {
-            Image(systemName: item.iconName)
-                .foregroundStyle(item.iconColor)
+        HStack(spacing: 4) {
+            Label {
+                Text(item.name)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            } icon: {
+                Image(systemName: item.iconName)
+                    .foregroundStyle(item.iconColor)
+            }
+
+            if !item.isDirectory && appState.isFileModified(item.url) {
+                Circle()
+                    .fill(.blue)
+                    .frame(width: 8, height: 8)
+            }
         }
     }
 }

@@ -121,6 +121,21 @@ final class AppState {
     // Comment focus for highlighting in ReviewPanel
     var focusedCommentId: UUID?
 
+    // Track files modified during this session (by external tools like Claude)
+    var modifiedFiles: Set<URL> = []
+
+    func markFileModified(_ url: URL) {
+        modifiedFiles.insert(url)
+    }
+
+    func markFilesModified(_ urls: [URL]) {
+        modifiedFiles.formUnion(urls)
+    }
+
+    func isFileModified(_ url: URL) -> Bool {
+        modifiedFiles.contains(url)
+    }
+
     // Terminal input handler
     var terminalSendHandler: ((String) -> Void)?
 
@@ -142,6 +157,9 @@ final class AppState {
     }
 
     func openFile(_ url: URL) {
+        // Clear modified flag when file is opened
+        modifiedFiles.remove(url)
+
         // Check if already open
         if let existing = openTabs.first(where: { $0.url == url }) {
             activeTabID = existing.id
