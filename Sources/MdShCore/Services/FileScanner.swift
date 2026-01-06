@@ -1,7 +1,7 @@
 import Foundation
 
 @MainActor
-final class FileScanner: Sendable {
+final class FileScanner {
     static let shared = FileScanner()
 
     private static let ignoredDirectories: Set<String> = [
@@ -21,7 +21,7 @@ final class FileScanner: Sendable {
         "vendor",
         "Pods",
         ".idea",
-        ".vscode",
+        ".vscode"
     ]
 
     private let fileManager = FileManager.default

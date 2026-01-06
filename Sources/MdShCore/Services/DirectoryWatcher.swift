@@ -8,7 +8,7 @@ final class DirectoryWatcher {
     private let onChange: @MainActor ([URL]) -> Void
     private let debounceInterval: TimeInterval
 
-    private nonisolated(unsafe) var eventStream: FSEventStreamRef?
+    nonisolated(unsafe) private var eventStream: FSEventStreamRef?
     private var debounceTask: Task<Void, Never>?
     private var pendingChanges: Set<URL> = []
 
@@ -37,7 +37,7 @@ final class DirectoryWatcher {
 
         eventStream = FSEventStreamCreate(
             nil,
-            { (_, info, numEvents, eventPaths, eventFlags, _) in
+            { _, info, numEvents, eventPaths, eventFlags, _ in
                 guard let info = info else { return }
                 let watcher = Unmanaged<DirectoryWatcher>.fromOpaque(info).takeUnretainedValue()
 

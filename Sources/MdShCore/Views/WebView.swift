@@ -96,7 +96,7 @@ struct ReviewWebView: NSViewRepresentable {
         // Note: No deinit needed - WeakScriptMessageHandler pattern prevents retain cycles
         // and the message handler is automatically cleaned up when WKWebView is deallocated
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {
             // Apply pending highlights after page loads
             guard let highlights = pendingHighlights else { return }
             applyHighlightsToWebView(webView, highlights: highlights)

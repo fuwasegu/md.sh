@@ -58,7 +58,7 @@ final class AppSettings {
             "PingFang SC",                // Simplified Chinese
             "PingFang TC",                // Traditional Chinese
             "Apple SD Gothic Neo",        // Korean
-            "Menlo",                      // Backup monospace
+            "Menlo"                       // Backup monospace
         ]
 
         // Create cascade list

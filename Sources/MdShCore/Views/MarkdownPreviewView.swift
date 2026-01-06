@@ -36,11 +36,10 @@ struct MarkdownPreviewView: View {
                     baseURL: fileURL.deletingLastPathComponent(),
                     comments: currentFileComments,
                     onLinkClick: handleLinkClick,
-                    onAddComment: handleAddComment,
-                    onFocusComment: { commentId in
-                        appState.focusedCommentId = commentId
-                    }
-                )
+                    onAddComment: handleAddComment
+                ) { commentId in
+                    appState.focusedCommentId = commentId
+                }
             } else {
                 WebView(
                     html: html,
