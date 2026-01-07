@@ -90,7 +90,7 @@ struct ReviewPanel: View {
             }
             .padding()
         }
-        .frame(minWidth: 250)
+        .frame(minWidth: 200)
         .sheet(item: $editingComment) { comment in
             EditCommentSheet(
                 comment: comment,
