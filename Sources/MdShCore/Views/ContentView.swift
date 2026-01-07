@@ -29,7 +29,7 @@ struct ContentView: View {
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 320)
         } detail: {
-            // Center + Right: Preview | Terminal
+            // Center + Right: Preview | Terminal | Review
             HSplitView {
                 // Center: Tabs + Preview
                 VStack(spacing: 0) {
@@ -59,6 +59,12 @@ struct ContentView: View {
                     TerminalContainerView(workingDirectory: appState.rootURL)
                         .frame(minWidth: 200, idealWidth: 350)
                 }
+
+                // Far Right: Review Panel (when visible)
+                if showReviewPanel {
+                    ReviewPanel()
+                        .frame(minWidth: 180, idealWidth: 280, maxWidth: 400)
+                }
             }
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
@@ -78,7 +84,9 @@ struct ContentView: View {
                     .keyboardShortcut("t", modifiers: .command)
 
                     Button {
-                        showReviewPanel.toggle()
+                        withAnimation {
+                            showReviewPanel.toggle()
+                        }
                     } label: {
                         Label(
                             "Review",
@@ -87,13 +95,10 @@ struct ContentView: View {
                                 : "text.bubble"
                         )
                     }
-                    .help("Toggle Review Panel")
+                    .help("Toggle Review Panel (Cmd+R)")
+                    .keyboardShortcut("r", modifiers: .command)
                 }
             }
-        }
-        .inspector(isPresented: $showReviewPanel) {
-            ReviewPanel()
-                .inspectorColumnWidth(min: 200, ideal: 280, max: 400)
         }
         .navigationSplitViewStyle(.balanced)
     }
