@@ -31,7 +31,7 @@ struct MdShApp: App {
                 .keyboardShortcut("n", modifiers: .command)
             }
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
 
         Settings {
             SettingsView()
