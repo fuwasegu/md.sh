@@ -10,6 +10,7 @@ struct MdShApp: App {
         WindowGroup(id: "main") {
             MainWindowView()
         }
+        .defaultSize(width: 1200, height: 800)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Open Folder...") {

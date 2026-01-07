@@ -9,22 +9,25 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // Left: File Tree
-            if let rootURL = appState.rootURL {
-                FileTreeView(rootURL: rootURL)
-            } else {
-                VStack(spacing: 16) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary)
-                    Text("Open a folder to get started")
-                        .foregroundStyle(.secondary)
-                    Button("Open Folder...") {
-                        openFolder()
+            Group {
+                if let rootURL = appState.rootURL {
+                    FileTreeView(rootURL: rootURL)
+                } else {
+                    VStack(spacing: 16) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("Open a folder to get started")
+                            .foregroundStyle(.secondary)
+                        Button("Open Folder...") {
+                            openFolder()
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 320)
         } detail: {
             // Center + Right: Preview | Terminal
             HSplitView {
@@ -49,12 +52,12 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
-                .frame(minWidth: 300)
+                .frame(minWidth: 200, idealWidth: 400)
 
                 // Right: Terminal (when visible)
                 if showTerminal {
                     TerminalContainerView(workingDirectory: appState.rootURL)
-                        .frame(minWidth: 250, idealWidth: 400)
+                        .frame(minWidth: 200, idealWidth: 350)
                 }
             }
             .toolbar {
@@ -90,7 +93,7 @@ struct ContentView: View {
         }
         .inspector(isPresented: $showReviewPanel) {
             ReviewPanel()
-                .inspectorColumnWidth(min: 250, ideal: 300, max: 400)
+                .inspectorColumnWidth(min: 200, ideal: 280, max: 400)
         }
         .navigationSplitViewStyle(.balanced)
     }
